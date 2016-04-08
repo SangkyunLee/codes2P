@@ -18,14 +18,14 @@ error_list = zeros(Nframe,1);
 Nlen = length(frames);
 fitInfo0 = repmat(s,Nlen,1);
 error_list0 = zeros(Nlen,1);
-parfor iimg0 = 1:Nlen   
+for iimg0 = 1:Nlen   
     data1=data;
     iimg = frames(iimg0);
     
         
-%     if iimg==445
-%         keyboard;
-%     end
+    if iimg==27
+        keyboard;
+    end
     
     CMi = CM(:,iimg);
     if (iimg-htwin)<1 || (iimg+htwin)>Nframe        
@@ -65,10 +65,9 @@ parfor iimg0 = 1:Nlen
         [y, x]= ind2sub(size(A1), boundary);
         if mode==3,
             k = convhull(x,y);
-            x = x(k);
-            y = y(k);
-            %figure; plot(x,y,'r-')
-            boundary = sub2ind(size(A1),y,x);
+            x1 = x(k);
+            y1 = y(k);
+            %figure; plot(x1,y1,'r-',x,y,'b*')
         end
 
         [z, r] = fitcircle([x y]');

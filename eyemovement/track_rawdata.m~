@@ -7,9 +7,8 @@ function [out, MSK]= track_rawdata(MOV,opts, InitPar, newCM,htwin)
 
 winsize = opts.winsize; 
 thr = opts.thr;
-if nargin<5
-    htwin=0;
-end
+if nargin<4
+
 %% select mask
 if nargin<3
     SEL.thr = thr ;
@@ -33,13 +32,8 @@ parfor iimg = 1:Nframe
     
     MSK1 = zeros(size(MOV,1),size(MOV,2));
     fmap = zeros(size(MOV,1),size(MOV,2));
-    if (iimg-htwin)<1 || (iimg+htwin)>Nframe
-        a=MOV(:,:,iimg);
-        fmap(a(:)<thr)=1;
-    else
-        a=mean(MOV(:,:,iimg-htwin:iimg+htwin),3);
-        fmap(a(:)<thr)=1;
-    end
+    
+    fmap(MOV(:,:,iimg)<thr)=1;
 
     [Li, num] = bwlabel(double(fmap),8);
     for ic=1:num

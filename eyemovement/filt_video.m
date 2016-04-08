@@ -49,7 +49,7 @@ classdef filt_video < VideoReader
                 
             for ifr = 1 : Nframe
                 frame  = frames(ifr);
-                if ifr == frames(1),
+                if frame == frames(1),
                     dtype = check_videotype(self);                          
                     eval(sprintf('self.data = %s(zeros(Yr(2)-Yr(1)+1,Xr(2)-Xr(1)+1,Nframe))',dtype));                    
                 end

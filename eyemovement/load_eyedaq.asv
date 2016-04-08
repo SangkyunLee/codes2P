@@ -1,0 +1,74 @@
+% clear all
+% eye_dir = 'Y:\data_2photon\AWAKE\0822BRLF\11082015_0822BRLF\eye11082015'
+% % eye_dir='/media/sdb_WD4T/data_2photon/AWAKE/0822BRLF/11082015_0822BRLF/eye11082015'
+% eye_dir ='/media/sdb_WD4T/data_2photon/AWAKE/0822BRLF/11082015_0822BRLF/eye11082015';
+
+% eye_dir = 'Y:\data_2photon\AWAKE\0822BRLF\11082015_0822BRLF_2\eye11082015_2'
+% recordnum=4;
+
+function load_eyedaq(eye_dir,recordnum)
+
+
+dlogfn = fullfile(eye_dir,sprintf('%04d.dlog',recordnum));
+vlogfn = fullfile(eye_dir,sprintf('%04d.vlog',recordnum));
+load(fullfile(eye_dir,sprintf('%04d.mat',recordnum)))
+
+
+vfid =fopen(vlogfn,'rt');
+vlog=single(fscanf(vfid,'%d, %f, %f\n'));
+fclose(vfid);
+vlog = reshape(vlog,[3 length(vlog)/3])';
+
+
+dfid = fopen(dlogfn,'rb');
+dlog = fread(dfid,'double');
+fclose(dfid);
+DAQTriggerTime=dlog(2);
+
+dlog =dlog(4:end);
+Nch=2;
+daqdata=reshape(dlog,[Nch length(dlog)/Nch])';
+
+datestr(DAQTriggerTime,'mmmm dd, yyyy HH:MM:SS.FFF AM')
+datestr(datenum(data_params.video.InitialTriggerTime),'mmmm dd, yyyy HH:MM:SS.FFF AM')
+
+% datestr(TriggerTime, 'HH:MM:SS.FFF')
+% datestr(datenum(data_params.video.InitialTriggerTime), 'HH:MM:SS.FFF')
+trigger_offset = str2double(datestr(DAQTriggerTime - datenum(data_params.video.InitialTriggerTime),'SS.FFF'));
+daqtime = daqdata(:,1);
+vidtime = vlog(:,2)-trigger_offset;
+
+end
+%------ find the timestamp for the first visual stimulation
+
+daqfr = data_params.daqinfo.Rate;
+function identify_stimstart(x,
+flatPDsig = daqdata(:,2); 
+
+len=round(length(sig)*0.2);
+h=figure; plot(daqtime(1:len,1),sig(1:len)); xlabel('time (sec)')
+waitfor(h)
+
+
+prompt = {'Threshold','Time start'};
+dlg_title = 'Input a starting point for the photo-diode';
+num_lines = 2;
+def = {'2','5'};
+answer = inputdlg(prompt,dlg_title,num_lines,def);
+thresh_PD = eval(answer{1});
+inxt = eval(answer{2});
+
+saminx =inxt;
+
+while sig(saminx)<thresh_PD
+    saminx=saminx+1;
+    if mod(saminx,100)==1, pause(0.01); end
+end
+
+start = saminx;
+stimstart_eyedaq = start/daqfr;
+
+
+
+
+

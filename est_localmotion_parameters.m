@@ -193,14 +193,26 @@ end
 
 hmsg= msgbox(['mean error:' num2str(mean(err,2)')]);
 uiwait(hmsg);
-if exist('hfig','var')   
- close(hfig);
+if exist('hfig','var') 
+    try
+        close(hfig);
+    catch err        
+        disp(err.message);
+    end
 end
 if exist('hx','var')   
- close(hx);
+    try
+        close(hx);
+    catch err        
+        disp(err.message);
+    end
 end
 if exist('hy','var')   
- close(hy);
+    try
+        close(hy);
+    catch err        
+        disp(err.message);
+    end    
 end
 
 if nroi>1

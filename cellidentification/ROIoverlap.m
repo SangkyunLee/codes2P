@@ -264,50 +264,53 @@ function setposnestCallback(varargin)
 %     newROI=[];
     for iroi = 1:nROI
         iroi
-        
+        %if iroi==181,keyboard; end
         oldPos = ROI(iroi).centerPos;
-        if ~isempty(oldPos)
-            currPos = oldPos + [ymove xmove];        
+        if isempty(oldPos)
+            continue;
+        end
+        currPos = oldPos + [ymove xmove];        
 
-            [Y X]=ind2sub([m n],ROI(iroi).fill_list);
-            dist =sqrt((Y-oldPos(1)).^2 + (X-oldPos(2)).^2);
-            cell_radius = max(dist);
-            pixel_dimension=[1 1];
-            clear tmpROI;
-            if isfield(ROI(iroi),'type') 
-                if strcmp(ROI(iroi).type,'Ring')
-                    pixel_list=donut_roi2(M.data.img1,currPos,cell_radius,pixel_dimension,0);
-                    tmpROI.type = 'Ring';
-                elseif strcmp(ROI(iroi).type,'Disk')
-                    pixel_list=disk_roi2(M.data.img1,currPos,cell_radius,pixel_dimension,0);
-                    tmpROI.type = 'Disk';
-                else
-                    error('unspecified type');
-                end
+        [Y X]=ind2sub([m n],ROI(iroi).fill_list);
+        dist =sqrt((Y-oldPos(1)).^2 + (X-oldPos(2)).^2);
+        cell_radius = max(dist);
+        pixel_dimension=[1 1];
+        clear tmpROI;
+        if isfield(ROI(iroi),'type') 
+            if strcmp(ROI(iroi).type,'Ring')
+                pixel_list=donut_roi2(M.data.img1,currPos,cell_radius,pixel_dimension,0);
+                tmpROI.type = 'Ring';
+            elseif strcmp(ROI(iroi).type,'Disk')
+                pixel_list=disk_roi2(M.data.img1,currPos,cell_radius,pixel_dimension,0);
+                tmpROI.type = 'Disk';
             else
-                error('ROI type is required');
+                error('unspecified type');
             end
+        else
+            error('ROI type is required');
+        end
 
-            if ~isempty(pixel_list)
-                tmpROI.pixel_list=pixel_list;            
-            else
-                tmpROI.pixel_list = ROI(iroi).pixel_list;            
-                warning([mfilename ':setposnetCallback'],'estimation failed in ROI %d',(iroi));
+        if ~isempty(pixel_list)
+            tmpROI.pixel_list=pixel_list;            
+        else
+            tmpROI.pixel_list = ROI(iroi).pixel_list;            
+            warning([mfilename ':setposnetCallback'],'estimation failed in ROI %d',(iroi));
 
-            end
-            
-        
-            
         end
         tmpROI = formulateROI(tmpROI, [m n]);            
         tmpROI.name = ROI(iroi).name;    
         tmpROI.type = ROI(iroi).type;
-        
+
         if iroi==1, 
             newROI = tmpROI;
         else
             newROI(iroi) =  tmpROI;
         end
+            
+        
+            
+        
+        
     end
     M.data.newROI = newROI;    
     M=gen_ROIimg(M);

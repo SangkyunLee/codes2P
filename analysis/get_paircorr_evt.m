@@ -46,4 +46,4 @@ out.paircorr = paircorr;
 out.inx_corr2d = inx4corr2d;
 out.size_corr2d = size2d;
 out.pval1d = pval1d;
-out.geomean = geomean;     
+% out.geomean = geomean;     

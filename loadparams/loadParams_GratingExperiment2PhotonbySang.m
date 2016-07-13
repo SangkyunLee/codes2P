@@ -32,7 +32,7 @@ else
     elseif strcmp(Params.scan_mode,'spiral_NB208')
         inx_mirror1=3;
         inx_mirror2=3;
-        inx_photodiode=2;
+        inx_photodiode=5;
     elseif strcmp(Params.scan_mode,'resonant_NB208')
         inx_mirror1=3;
         inx_mirror2=3;
@@ -61,19 +61,19 @@ fullfn_DAQ = fullfile(mainpath, DAQfn);
 
 xml_fn = Params.files.xml_fn;
 subpath_xml = Params.files.subpath_xml;
-fullfn_xml = fullfile(mainpath, subpath_xml, xml_fn)
+fullfn_xml = fullfile(mainpath, subpath_xml, xml_fn);
 xml_data = xml_parseany(fileread(fullfn_xml));
 Params.Nframes = max(size(xml_data.Sequence{1,1}.Frame));
 
-lastframetime = str2num(xml_data.Sequence{1,1}.Frame{1,Params.Nframes}.ATTRIBUTE.relativeTime);
-firstframetime = str2num(xml_data.Sequence{1,1}.Frame{1,1}.ATTRIBUTE.relativeTime);
+lastframetime = str2double(xml_data.Sequence{1,1}.Frame{1,Params.Nframes}.ATTRIBUTE.relativeTime);
+firstframetime = str2double(xml_data.Sequence{1,1}.Frame{1,1}.ATTRIBUTE.relativeTime);
 Params.msperframe = 1000*( lastframetime - firstframetime )/(Params.Nframes-1);
 
 
 
 if strcmp(DAQfn(end-3:end),'.EDR')
 
-    [DAQ_data, h] = import_edr(fullfn_DAQ);
+    [DAQ_data, ~] = import_edr(fullfn_DAQ);
     samplingint = diff(DAQ_data(:,1));
     Params.samplingfreq_NI = 1/samplingint(1);
 
@@ -85,7 +85,7 @@ if strcmp(DAQfn(end-3:end),'.EDR')
     Params.mirror2 = mirror2;
 
     Nsamples_NI = size(DAQ_data,1);
-    zmirror1 = mirror1 - mean(mirror1);
+    %zmirror1 = mirror1 - mean(mirror1);
     % 
     zmirror1= ztrans(mirror1,1);
     zmirror2 = ztrans(mirror2,1);
@@ -97,7 +97,7 @@ elseif strcmp(DAQfn(end-3:end),'.csv') %-------- this code for NB208 in neurosen
     fid = fopen(fullfn_DAQ);
     C1 = textscan(fid, '%s %s%d, %s%d, %s%d, %s%d\n');
     DAQ_data = textscan(fid, '%f, %f, %f, %f, %f','CollectOutput', 1);
-    fclose(fid)    
+    fclose(fid);    
     DAQ_data = DAQ_data{1};    
     DAQ_data(:,1) = DAQ_data(:,1)/1000;
     
@@ -112,7 +112,7 @@ elseif strcmp(DAQfn(end-3:end),'.csv') %-------- this code for NB208 in neurosen
     Params.mirror2 = mirror2;
 
     Nsamples_NI = size(DAQ_data,1);
-    zmirror1 = mirror1 - mean(mirror1);
+    %zmirror1 = mirror1 - mean(mirror1);
     % 
     zmirror1= ztrans(mirror1,1);
     zmirror2 = ztrans(mirror2,1);
@@ -122,12 +122,12 @@ elseif strcmp(DAQfn(end-3:end),'.csv') %-------- this code for NB208 in neurosen
     
 end
 
-switch Params.scan_mode
-    case {'spiral','spiral_NB208'}
-        test=1
-    otherwise
-        test=0;
-end
+% switch Params.scan_mode
+%     case {'spiral','spiral_NB208'}
+%         test=1
+%     otherwise
+%         test=0;
+% end
         
 
 bphoto = questdlg('Do you want to identify the timestamp of frames from photo diode?', ...
@@ -166,12 +166,13 @@ if ~isempty(bphoto) && strcmp(bphoto,'Yes')
             clear mirror_frame_start mirror_start_time
             [~, offset] = min(zmirror2(initguess_start:initguess_start+5));
             ik = initguess_start + offset-1;
-            mirror_frame_start(ik) = 10;
+            mirror_frame_start(ik) = 10;            
+            mirror_start_time = Inf*ones(10000,1);
             mirror_start_time(1) = ik;
 
             estsamplesbtwframe = round(Params.msperframe/1000*Params.samplingfreq_NI);
             x = 2;
-            ixs=[];
+            %ixs = [];
             while ik<Nsamples_NI
 
                 istart = ik + round(estsamplesbtwframe*0.9);
@@ -179,11 +180,8 @@ if ~isempty(bphoto) && strcmp(bphoto,'Yes')
                 if iend> Nsamples_NI
                     break;
                 end
-                ixs=[ixs;[istart iend]];
-
-        %         sdv = diff(dM(istart:iend));        
-        %         asdv = abs(sdv);
-        %         [~,inx1]=max(sdv);        
+                %ixs=[ixs;[istart iend]];
+      
 
                 amp =abs(zmirror2(istart:iend));
         %         figure; plot(amp,'.-')
@@ -202,6 +200,7 @@ if ~isempty(bphoto) && strcmp(bphoto,'Yes')
                 mirror_start_time(x) = ik;
                 x = x + 1;                      
             end
+            mirror_start_time = mirror_start_time(1:x-1);
 
             if length(mirror_start_time)>= Params.Nframes
                 ddf=diff(diff(mirror_start_time))*1000/Params.samplingfreq_NI;
@@ -219,6 +218,8 @@ if ~isempty(bphoto) && strcmp(bphoto,'Yes')
 
 
                     image_frame_duration = (mirror_start_time(size(mirror_start_time,2))-mirror_start_time(1))/(size(mirror_start_time,2)-1);
+                    image_frame_time = zeros(length(mirror_start_time),1);
+                    
                     for i = 1: length(mirror_start_time)
                         image_frame_time(i) = round(mirror_start_time(i)+image_frame_duration/2);
                         image_frame(image_frame_time(i)) = 1;
@@ -246,7 +247,7 @@ if ~isempty(bphoto) && strcmp(bphoto,'Yes')
             num_lines = 1;
             def = {'1'};
             answer = inputdlg(prompt,dlg_title,num_lines,def);
-            Thr = str2num(answer{1});
+            Thr = str2double(answer{1});
             guessTnewfrm = find(dM>Thr);
             initguess_start = guessTnewfrm(1);
 
@@ -255,12 +256,13 @@ if ~isempty(bphoto) && strcmp(bphoto,'Yes')
             mirror_frame_start = zeros(size(zmirror1));
             clear mirror_start_time;
             mirror_frame_start(ik) = 10;
+            mirror_start_time = Inf*ones(10000,1);
             mirror_start_time(1) = ik;
             
 
             estsamplesbtwframe = round(Params.msperframe/1000*Params.samplingfreq_NI);
             x = 2;
-            ixs=[];
+            
             while ik<Nsamples_NI
 
                 istart = ik + round(estsamplesbtwframe*0.9);
@@ -275,9 +277,9 @@ if ~isempty(bphoto) && strcmp(bphoto,'Yes')
                     mirror_frame_start(ik) = 10;
                     mirror_start_time(x) = ik;
                     x = x + 1;  
-                end
-                  
+                end                  
             end
+            mirror_start_time = mirror_start_time(1:x-1);
 
             if length(mirror_start_time)>= Params.Nframes
                 ddf=diff(diff(mirror_start_time))*1000/Params.samplingfreq_NI;
@@ -293,7 +295,7 @@ if ~isempty(bphoto) && strcmp(bphoto,'Yes')
                     Params.mirror_frame_start = mirror_frame_start;      
                     Params.diff_mirror_start_time = diff(mirror_start_time);
 
-
+                    image_frame_time = zeros(length(mirror_start_time),1);
                     image_frame_duration = (mirror_start_time(size(mirror_start_time,2))-mirror_start_time(1))/(size(mirror_start_time,2)-1);
                     for i = 1: length(mirror_start_time)
                         image_frame_time(i) = round(mirror_start_time(i)+image_frame_duration/2);
@@ -302,7 +304,7 @@ if ~isempty(bphoto) && strcmp(bphoto,'Yes')
                     Params.frame_times = image_frame_time;
                     Params.image_frame = image_frame;
                 end
-
+                
 
             elseif length(mirror_start_time)< Params.Nframes
                 error('frame identification failed; Identified frames are less than the Nframes');
@@ -325,14 +327,14 @@ else
     elseif strcmp(Params.scan_mode,'spiral')                
         [~, initguess_start] = max(dM(1:round(Nsamples_NI/4)));    
     else
-        intiguess_start=0;
+        initguess_start=0;
     end 
     bTimestampOfframe='No';
     
     %[xmlfile,PathName] = uigetfile('*.xml','Select the xml file');
     %fullfn_xml = fullfile(PathName, xmlfile);
     files = Params.files;
-    fullfn_xml=fullfile(files.mainpath,files.subpath_xml, files.xml_fn)
+    fullfn_xml = fullfile(files.mainpath,files.subpath_xml, files.xml_fn);
     xml_data = xml_parseany(fileread(fullfn_xml));
     Params.date_time = xml_data.ATTRIBUTE.date;
 %     numpar = length(xml_data.Sequence{1,1}.Frame{1,1}.PVStateShard{1,1}.Key);
@@ -356,11 +358,11 @@ else
         def = {num2str(initguess_start)};
         answer = inputdlg(prompt,dlg_title,num_lines,def);
         if ~isempty(answer)
-            firstframeinx= str2num(answer{1});
+            firstframeinx= str2double(answer{1});
             mirror_frame_start = zeros(size(mirror1));
             mirror_start_time = zeros(1,Params.Nframes);
             for iframe = 1 : Params.Nframes 
-                ik = firstframeinx + round(str2num(xml_data.Sequence{1}.Frame{iframe}.ATTRIBUTE.relativeTime) * Params.samplingfreq_NI);
+                ik = firstframeinx + round(str2double(xml_data.Sequence{1}.Frame{iframe}.ATTRIBUTE.relativeTime) * Params.samplingfreq_NI);
                 mirror_frame_start(ik) = 10;    
                 mirror_start_time(iframe) = ik;
             end
@@ -391,7 +393,7 @@ else
                 Params.mirror_frame_start = mirror_frame_start;      
                 Params.diff_mirror_start_time = diff(mirror_start_time);
 
-
+                image_frame_time = zeros(length(mirror_start_time),1);
                 image_frame_duration = (mirror_start_time(size(mirror_start_time,2))-mirror_start_time(1))/(size(mirror_start_time,2)-1);
                 for i = 1: length(mirror_start_time)
                     image_frame_time(i) = round(mirror_start_time(i)+image_frame_duration/2);
@@ -414,7 +416,7 @@ end
 %% loading stimulus parameters and stimulus time from photo diode.
 fullfn_stim1 = fullfile(mainpath, path_stim,stim_fn1);
 load(fullfn_stim1)
-paramconstants = stim.params.constants;
+%paramconstants = stim.params.constants;
 paramtrial = stim.params.trials;
 
 stimparam.ScreenRefreshrate = ScreenRefreshrate;
@@ -430,7 +432,7 @@ stimparam.tempoFreq = paramtrial(end).tempoFreq;
 
 
 fullfn_stim2 = fullfile(mainpath, path_stim,stim_fn2);
-if exist(fullfn_stim2)==2,
+if exist(fullfn_stim2,'file')==2,
     Folder= fullfile(mainpath,path_stim);
     s = nex2mat(Folder,stim_fn2);
     timestamps = 1:stimparam.repetitions;
@@ -463,7 +465,7 @@ stimparam.cond = cond;
 
 PDsig = DAQ_data(:,inx_photodiode); 
 
-flatPDsig = PDsig -mean(PDsig);
+
 flatPDsig = abs(PDsig);
 
 len=round(length(flatPDsig)*0.2);
@@ -473,7 +475,7 @@ waitfor(h)
 
 prompt = {'Threshold','Time start'};
 dlg_title = 'Input a starting point for the photo-diode';
-num_lines = 2
+num_lines = 2;
 def = {'3','5'};
 answer = inputdlg(prompt,dlg_title,num_lines,def);
 thresh_PD = eval(answer{1});
@@ -545,7 +547,7 @@ hfig=figure; plot(DAQ_data(1:len2),[onset_tstamp_vector2(1:len2)/5*(max(flatPDsi
 
 stimparam.stim_onset_tstampinNI = stim_onset_tstampinNI;
 
-if exist('blank_onset_tstampinNI')
+if exist('blank_onset_tstampinNI','var')
     stimparam.stim_duration_tstampinNI = blank_onset_tstampinNI - stim_onset_tstampinNI;
     stimparam.blank_onset_tstampinNI = blank_onset_tstampinNI;
 else
@@ -556,7 +558,7 @@ stimparam.onset_tstamp_vector = onset_tstamp_vector2;
 
 Params.stim_onset_tstampinNI = stim_onset_tstampinNI;
 Params.stim_duration_tstampinNI = stimparam.stim_duration_tstampinNI;
-if exist('blank_onset_tstampinNI')    
+if exist('blank_onset_tstampinNI','var')    
     Params.blank_onset_tstampinNI = blank_onset_tstampinNI;
 else
 end

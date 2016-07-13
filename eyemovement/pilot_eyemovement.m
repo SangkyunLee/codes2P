@@ -1,7 +1,7 @@
 clear all
-eye_dir = 'Y:\data_2photon\AWAKE\0822BRLF\11082015_0822BRLF\eye11082015'
+eye_dir = 'X:\Awake\EYE\eye0129B2_6'
 % eye_dir='/media/sdb_WD4T/data_2photon/AWAKE/0822BRLF/11082015_0822BRLF/eye11082015'
-recordnum=3
+recordnum=1
 videofn = fullfile(eye_dir,sprintf('%04d.mj2',recordnum));
 dlogfn = fullfile(eye_dir,sprintf('%04d.dlog',recordnum));
 vlogfn = fullfile(eye_dir,sprintf('%04d.vlog',recordnum));

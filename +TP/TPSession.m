@@ -11,6 +11,7 @@ classdef TPSession
         imagingmethod; % spiral(224), sprial(512), resonant(1024)
         
         no_scan; % # scans
+        scanId; % scan identity numbers
         scan_stim; % stimulus type in each scan        
         scan_ncell; % no cell identified
         FOV_size; % FOV size in pixel   
@@ -33,9 +34,17 @@ classdef TPSession
                % load_data(info)
             else
                 loaddata =load(fn_data);   
+                
+                
                 self.scans = loaddata.data;                
                 self.fn_data = fn_data;
                 self.no_scan = length(loaddata.data);  
+                self.scanId = zeros(1,self.no_scan);
+                for iscan= 1: self.no_scan
+                    snum = strsplit(loaddata.data(iscan).Params.files.subpath_xml,'-');
+                    self.scanId(iscan) =  str2double(snum{end});
+                end
+                
                 self.scan_ncell = zeros(self.no_scan,1);
                 if nargin>1,     
                     
@@ -76,22 +85,23 @@ classdef TPSession
             firstscan = scanlist(1);
             stimparam1 = self.scans(firstscan).Params.stimparam;
             
-            bs = ones(max(scanlist),length(evtsort));
+            bs = ones(length(scanlist),length(evtsort));
             for ievt = 1 : length(evtsort)                
                 evtlist = stimparam1.(lower(evtsort{ievt}));
-                for inx_scan = scanlist(2:end)
+                for inx_scan0 = 1:length(scanlist)-1
+                    inx_scan = scanlist(inx_scan0);
                     stimparam = self.scans(inx_scan).Params.stimparam;                    
                     evtlist2 = stimparam.(lower(evtsort{ievt}));
                     if length(evtlist) == length(evtlist2)
-                        bs(scanlist(inx_scan),ievt) = ~ sum(abs(evtlist-evtlist2));
+                        bs(inx_scan0,ievt) = ~ sum(abs(evtlist-evtlist2));
                     else
-                        bs(scanlist(inx_scan),ievt)= false;
+                        bs(inx_scan0,ievt)= false;
                         
                     end
                 end
                 
             end
-            bs = bs(scanlist,:);       
+     
             if all(bs(:)),
                 b=true;
             else
@@ -106,14 +116,15 @@ classdef TPSession
             firstscan = scanlist(1);
             param1 = self.scans(firstscan).Params;
             
-            bs = ones(max(scanlist),length(parsort));
+            bs = ones(length(scanlist),length(parsort));
             for ipar = 1 : length(parsort)                
                 parlist = param1.(parsort{ipar});
                 if strcmp(parsort{ipar},'msperframe')
                     parlist = floor(parlist);
                 end
                     
-                for inx_scan = scanlist(2:end)
+                for inx_scan0 = 1 : length(scanlist)-1%scanlist(2:end)
+                    inx_scan = scanlist(inx_scan0);
                     param = self.scans(inx_scan).Params;                    
                     parlist2 = param.(parsort{ipar});
                     if strcmp(parsort{ipar},'msperframe')
@@ -121,15 +132,15 @@ classdef TPSession
                     end 
                     
                     if length(parlist) == length(parlist2)
-                        bs(scanlist(inx_scan),ipar) = ~ sum(abs(parlist-parlist2));
+                        bs(inx_scan0,ipar) = ~ sum(abs(parlist-parlist2));
                     else
-                        bs(scanlist(inx_scan),ipar)= false;
+                        bs(inx_scan0,ipar)= false;
                         
                     end
                 end
                 
             end
-            bs = bs(scanlist,:);
+            
             if all(bs(:)),
                 b=true;
             else

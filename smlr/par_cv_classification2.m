@@ -1,5 +1,5 @@
-function [out opts] = par_cv_classification2(dataset_train,label_train,dataset_test,label_test, opts)
-%par_cv_classification2(dataset_train,label_train,dataset_test,label_test, opts)
+function [out, opts] = par_cv_classification2(dtr,label_train,dte,label_test, opts)
+%par_cv_classification2(dtr,label_train,dte,label_test, opts)
 % for parallel processing
 % This function works when the training dataset is different from the
 % testing dataset
@@ -18,7 +18,7 @@ function [out opts] = par_cv_classification2(dataset_train,label_train,dataset_t
 %                 mode == 3, time-independent (collapse all time info)            
 %                 mode == 4, spatio-temporal prediction (one trial --> one prediction)
 %         - inxsample: index of samples to be used for classification.
-%         - cvmode: cross-validation method ('random','kfold')        
+%         - cvmode: cross-validation method ('random','kfold','precal')        
 %         - Ncv: number of cross-validation
 %         - pertest: percentage of testing data in cross-validation, 
 %                    This percentage is based on # trials of testdata     
@@ -30,13 +30,13 @@ function [out opts] = par_cv_classification2(dataset_train,label_train,dataset_t
 %         - bshuffle: shuffle trials in each dimension independently    
 % 2016-02-10, written by Sangkyun Lee
 % 2016-03-06, shuffling option added
-
+% 2016-08-29, cvmode('precal') added for pre-calculated sample indexesforCV
 def_opts = struct('sel_cl',[1 2],'out_ch',[],'Nch',1,...
     'lambda1s',[1e-5  1e-1 1e-0 1e1],'lambda2s',[1e-5  1e-1 1e-0 1e1],...
     'mode',1,...
     'inxsample',1,...
     'cvmode','random','Ncv',10,'pertest',0.1,'perval',0.1,'pertrain',0.8,...
-    'classifier','smlr',...
+    'classifier','smlr','bias',true,...
     'bSparseW',true,'bshuffle',false);
 
 if nargin < 3,
@@ -54,7 +54,15 @@ end;
 sel_cl=opts.sel_cl;
 out_ch=opts.out_ch;
 Nch=opts.Nch;
-in_ch=setdiff((1:Nch),out_ch);
+
+if iscell(out_ch)
+    gen_inch = @(y)setdiff(1:Nch,y);
+    in_ch = cellfun(gen_inch,out_ch,'UniformOutput',false);
+else
+    in_ch=setdiff((1:Nch),out_ch);
+end
+
+
 lambda1s=opts.lambda1s;
 lambda2s=opts.lambda2s;
 % fn_prefix=opts.fn_prefix
@@ -65,55 +73,45 @@ pertrain = opts.pertrain;
 perval = opts.perval;
 inxsample =opts.inxsample;
 bshuffle = opts.bshuffle;
+bias = opts.bias;
 
 if strcmp(opts.cvmode,'kfold')
     assert(length(label_test)~=length(label_train),'# training sample should be the same as # testing sample');
     pertrain = 1-pertest-perval;    
     assert(pertrain>0 & pertrain<1,'pertrain should be (0,1)');
-else
+elseif strcmp(opts.cvmode,'random')
     % when # training samples are different from # testing samples,
     % to get the given number of training samples from get_cvinxs_rand(label_train,Ncv,pertest,perval);   
     pertest0 = 1-pertrain-perval;
     assert(pertest0>0 &pertest0<1,'pertrain+perval should be (0,1)');
 
 end
-    
+   
+[dtr,dte]= datrsh(dtr,dte,in_ch,opts.mode,inxsample);
+% if ~iscell(dtr)
+%     dtr = dtr(~isnan(sum(dtr,2)),:);
+%     dte = dte(~isnan(sum(dte,2)),:);
+%     if isempty(dtr) || isempty(dte)
+%         out.acc_train = [];
+%         out.acc_test = [];
+%         out.lambda = [];
+%         out.Ws = [];
+%         return;
+%     end
+% end
 
 
-dataset_train=dataset_train(in_ch,:,:);
-dataset_test=dataset_test(in_ch,:,:);
-
-%%
-%
-
-if opts.mode  == 1
-    dataset_train = reshape(mean(dataset_train(:,inxsample,:),2),[size(dataset_train,1) size(dataset_train,3)]);
-    dataset_test = reshape(mean(dataset_test(:,inxsample,:),2),[size(dataset_test,1) size(dataset_test,3)]);
-elseif opts.mode == 4    
-    dataset_train = reshape(dataset_train(:,inxsample,:),[size(dataset_train,1)*length(inxsample) size(dataset_train,3)]);
-    dataset_test = reshape(dataset_test(:,inxsample,:),[size(dataset_test,1)*length(inxsample) size(dataset_test,3)]);
-else
-    error('not implemented yet');
-end
-
-%%
-
-dataset_train = dataset_train(~isnan(sum(dataset_train,2)),:);
-dataset_test = dataset_test(~isnan(sum(dataset_test,2)),:);
-if isempty(dataset_train) || isempty(dataset_test)
-    out.acc_train = [];
-    out.acc_test = [];
-    out.lambda = [];
-    out.Ws = [];
-    return;
-end
 
 %% shuffle data
 if bshuffle,
-    [~, dataset_train] = shuffle_trials(label_train,unique(label_train),dataset_train');
-    dataset_train = dataset_train';
-    [~, dataset_test] = shuffle_trials(label_test,unique(label_test),dataset_test');
-    dataset_test = dataset_test';
+    if iscell(dtr)
+        wr_sh = @(dtr) shuffle_trials(label_train,unique(label_train),dtr')';
+        dtr = cellfun(wr_sh,dtr,'UniformOutput', false);
+    else
+        dtr = shuffle_trials(label_train,unique(label_train),dtr')';
+        
+    end
+
 end
 
 
@@ -154,6 +152,9 @@ elseif strcmp(opts.cvmode,'kfold')
     end
     inxs_cv_train = get_Kfoldcvinxs(label_train,Ncv,bval);
     inxs_cv_test = get_Kfoldcvinxs(label_test,Ncv,bval);
+elseif strcmp(opts.cvmode,'precal')
+    inxs_cv_train = opts.inxs_cv;
+    inxs_cv_test = opts.inxs_cv;
     
 else
     error('Only random or kfold cross-validation mode allowed');
@@ -163,6 +164,12 @@ end
 inxs_train = inxs_cv_train.inxs_train;
 inxs_val = inxs_cv_train.inxs_val;
 inxs_test = inxs_cv_test.inxs_test;
+
+inxs_cv.inxs_train = inxs_train;
+inxs_cv.inxs_val = inxs_val;
+inxs_cv.inxs_test = inxs_test;
+
+
 mode = opts.mode;
 classifier = opts.classifier; 
 
@@ -170,18 +177,36 @@ classifier = opts.classifier;
 acc_test=zeros(1, Ncv);
 acc_train=zeros(1, Ncv);
 lambda = zeros(2, Ncv);
-Ws = zeros([size(dataset_train,1)+1 length(sel_cl) Ncv]);
 
+if iscell(in_ch)
+    len = length(in_ch{1});
+else
+    len = length(in_ch);
+end
+
+if bias
+    Ws = zeros([len+1 length(sel_cl) Ncv]);
+else
+    Ws = zeros([len length(sel_cl) Ncv]);
+end
 [l1,l2]=meshgrid(lambda1s, lambda2s);
 
 parfor cvinx = 1:Ncv
     % preparation for parloop
-    Xtr = dataset_train;
-    Xte = dataset_test;
+    if iscell(dtr)
+        Xtr = dtr{cvinx};
+        Xte = dte{cvinx};
+    else
+        Xtr = dtr;
+        Xte = dte;
+    end
     Ltrain = label_train;
     Ltest = label_test;
     Ltrain = Ltrain(:)';
     Ltest = Ltest(:)';
+    
+    acc_train1 = NaN;
+    acc_test1 = NaN;
     
     lambda1s = l1;
     lambda1s = lambda1s(:);
@@ -218,7 +243,8 @@ parfor cvinx = 1:Ncv
                 for inx_lam=1:length(lambda1s)
                     lambda1=lambda1s(inx_lam);
                     lambda2=lambda2s(inx_lam);
-                    [~, ~, out_val] = train_smlr(trdat, trlab, valdat,  lambda1, lambda2,1e+4); 
+                    %[~, ~, out_val] = train_smlr(trdat, trlab, valdat,  lambda1, lambda2,1e+4);
+                    [~, ~, out_val] = train_smlr2(trdat, trlab, valdat,  lambda1, lambda2,bias, 1e+4);
                     acc_val1(inx_lam) = length(find((sel_cl1(out_val.estL)-vallab)==0))/length(vallab);                      
                 end
                 
@@ -241,12 +267,13 @@ parfor cvinx = 1:Ncv
 
                 lambda1=lambda1s(mi);
                 lambda2=lambda2s(mi);
-                [W, out_tr] = train_smlr(trdat, trlab,[], lambda1,lambda2, 1e+4); 
+                %[W, out_tr] = train_smlr(trdat, trlab,[], lambda1,lambda2, 1e+4);
+                [W, out_tr] = train_smlr2(trdat, trlab,[], lambda1,lambda2,bias, 1e+4);
                 acc_train1= length(find((sel_cl1(out_tr.estL)-trlab)==0))/length(trlab);
 
 
                 %--- decoding acc in testing data
-                [estL] = test_smlr(tedat, W);               
+                [estL] = test_smlr2(tedat, W,bias);               
                 acc_test1 = length(find((sel_cl1(estL)-telab)==0))/length(telab);
                 
                 Ws(:,:,cvinx)=W;
@@ -258,8 +285,13 @@ parfor cvinx = 1:Ncv
         otherwise
             fprintf('not implemented yet');
     end
-    acc_train(cvinx) = acc_train1;
-    acc_test(cvinx) =  acc_test1;         
+    if isnan(acc_train1)
+        acc_train(cvinx) = NaN;
+        acc_test(cvinx) =  NaN;
+    else
+        acc_train(cvinx) = acc_train1;
+        acc_test(cvinx) =  acc_test1;         
+    end
 end
       
 
@@ -268,7 +300,41 @@ out.acc_train = acc_train;
 out.acc_test = acc_test;
 out.lambda = lambda;
 out.Ws = Ws;
- 
+out.inxs_cv = inxs_cv;
+end
+
+
+function [dtr,dte]= datrsh(dtr,dte,in_ch,mode,inxsample)
+    if iscell(in_ch)
+        get_dtr = @(inx) dtr(inx,:,:);     
+        get_dte = @(inx) dte(inx,:,:);             
+        dtr = cellfun(get_dtr,in_ch,'UniformOutput',false);        
+        dte = cellfun(get_dte,in_ch,'UniformOutput',false);
+        if mode  == 1
+            rsh = @(d) reshape(mean(d(:,inxsample,:),2),[size(d,1) size(d,3)]);
+            dtr = cellfun(rsh,dtr,'UniformOutput',false);        
+            dte = cellfun(rsh,dte,'UniformOutput',false);        
+        elseif mode==4    
+            rsh=@(d) reshape(d(:,inxsample,:),[size(d,1)*length(inxsample) size(d,3)]);
+            dtr = cellfun(rsh,dtr,'UniformOutput',false);
+            dte = cellfun(rsh,dte,'UniformOutput',false);
+        end
+
+    else
+        dtr=dtr(in_ch,:,:);
+        dte=dte(in_ch,:,:);
+
+        if mode  == 1
+            dtr = reshape(mean(dtr(:,inxsample,:),2),[size(dtr,1) size(dtr,3)]);
+            dte = reshape(mean(dte(:,inxsample,:),2),[size(dte,1) size(dte,3)]);
+        elseif mode == 4    
+            dtr = reshape(dtr(:,inxsample,:),[size(dtr,1)*length(inxsample) size(dtr,3)]);
+            dte = reshape(dte(:,inxsample,:),[size(dte,1)*length(inxsample) size(dte,3)]);
+        else
+            error('not implemented yet');
+        end
+    end
+end
        
         
         

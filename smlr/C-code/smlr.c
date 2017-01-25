@@ -235,7 +235,7 @@ void smlr(double* W0, double* X, double* Y, int d, int m, int n,
             diff = fabs(Lp[iter]-Lp[iter-1]);
             if (iter==1) diff1 = diff;
             if (diff<1e-3 | (diff/diff1)<1e-5){
-                mexPrintf("Converged in iteration: %d\n",iter);
+                /*mexPrintf("Converged in iteration: %d\n",iter);*/
                 break;
             }
         }

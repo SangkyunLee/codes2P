@@ -1,4 +1,4 @@
-function inxsample = select_samples_evtratio(evts,selevt, ratio)
+function [inxsample, ixsep] = select_samples_evtratio(evts,selevt, ratio)
 %function inxsample = select_samples_evtratio(evts,selevt, ratio)
 % select equal or similar samples across selected events
 % this function can prevent sampling bias
@@ -14,9 +14,11 @@ condlen = cellfun(@length,inxconds);
 nsel = floor(bsxfun(@min, condlen, min(condlen)*ratio));
 
 inxsample = zeros(sum(nsel),1);
+ixsep = cell(1,length(selevt));
 cumn = 0;
 for inxevt = 1 : length(selevt)
-    inxsample(cumn+1:sum(nsel(1:inxevt)))= inxconds{inxevt}(1:nsel(inxevt));
+    ixsep{inxevt}=inxconds{inxevt}(1:nsel(inxevt));
+    inxsample(cumn+1:sum(nsel(1:inxevt)))= ixsep{inxevt};
     cumn = cumn + nsel(inxevt);
 end
 inxsample = sort(inxsample);    

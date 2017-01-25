@@ -107,9 +107,11 @@ for iimg = 2 : Nframe
     end
     A = zeros(size(MOV,1),size(MOV,2));
     [~, inx]=sort(dist,'ascend');
-    [~, inx1]=sort(dist1,'ascend');
-    if inx(1) ~= inx1(1),
-        continue;
+    if nargin>3        
+        [~, inx1]=sort(dist1,'ascend');
+        if inx(1) ~= inx1(1),
+            continue;
+        end
     end
     inx = inx(1);
     dists(iimg)=dist(inx);

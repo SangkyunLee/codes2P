@@ -16,7 +16,7 @@ function [W, outs] = sl_smlr(X, label, conf)
 
 %for |.|^2, lambda1
 %for |.|, lambda2
-def_conf = struct('W',[],'lambda1',0.1,'lambda2',0.1,'MAX_ITER',1e+4,'btrain',true);
+def_conf = struct('W',[],'lambda1',0.1,'lambda2',0.1,'MAX_ITER',1e+4,'btrain',true,'bias',false);
 fnms = fieldnames(def_conf);
 for i=1:length(fnms),
     if ~isfield(conf,fnms{i}),
@@ -29,35 +29,39 @@ lambda1 = conf.lambda1;
 lambda2 = conf.lambda2;
 W = conf.W;
 btrain = conf.btrain;
+bias = conf.bias;
 
 Y=zeros(length(unique(label)),length(label));
 CL=unique(label);
-for i=1:length(CL)
-    inxC=find(label==CL(i));
-    Y(i, inxC)=1;
+for i=1:length(CL)    
+    Y(i, label==CL(i))=1;
 end
 
-[m,n] = size(Y);
+m = size(Y,1);
 [d_orig,n] = size(X);
 
 if btrain
     inx0=find(sum(abs(X),2)==0);
-    inxnz=setdiff([1:d_orig],inx0);
+    inxnz=setdiff(1:d_orig,inx0);
     X=X(inxnz,:);
-    X = [X; ones(1,n)];
-    [d,n] = size(X);
+    if conf.bias
+        X = [X; ones(1,n)];    
+    end
+    d = size(X,1);
 else
-    X = [X; ones(1,n)];
+    if conf.bias
+        X = [X; ones(1,n)];
+    end
 end
 % keyboard;
 if btrain && isempty(W)
     W = [0.01*(rand(m-1,d)-0.5); zeros(1,d)]';  %[d x m]
 elseif btrain && ~isempty(W)
-    if size(W,1) ~= d_orig+1
+    if size(W,1) ~= d
         error('Mismatch between sizes of W and X');
     else        
         if size(W,2) ~= m, error('Mismatch between sizes of W and X'); end        
-        W = W([inxnz d_orig+1],:);
+        W = W([inxnz d],:);
     end
 elseif ~btrain && isempty(W)
     error('W is required.');
@@ -67,7 +71,7 @@ end
 
 
 if btrain
-    if exist('smlr','file')==3
+    if exist('smlr','file')==3 && conf.bpar
         [W L]=smlr(W,X,Y,lambda1,lambda2,MAX_ITER);
     else
         % constant over iterations
@@ -87,12 +91,16 @@ if btrain
 %     legend('log-likelihod','log-posterior')
     b=W'*X;
     P=bsxfun(@rdivide,exp(b),(sum(exp(b))));
-    [mv mi]=max(P);
+    [~, mi]=max(P);
 
 
     Wtmp=W;
-    W=zeros(d_orig+1,m);
-    W([inxnz d_orig+1],:)=Wtmp;
+    W=zeros(d,m);
+    if bias
+        W([inxnz d],:)=Wtmp;
+    else
+        W(inxnz,:)=Wtmp;
+    end
     outs.P = P;
     outs.estL = mi;
     outs.LL = LL;
@@ -103,7 +111,7 @@ else
     
     b=W'*X;
     P=bsxfun(@rdivide,exp(b),(sum(exp(b))));
-    [mv mi]=max(P);
+    [~, mi]=max(P);
     outs.P = P;
     outs.estL = mi;
 end

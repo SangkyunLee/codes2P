@@ -1,4 +1,4 @@
-function [mask M ] = est_localmotion_parameters(refimg,meanimg, images, fn_alignmask, winsize, bgpu, bglobal)
+function [mask, M] = est_localmotion_parameters(refimg,meanimg, images, fn_alignmask, winsize, bgpu, bglobal)
 % [mask M ] = est_localmotion_parameters(refimg,meanimg, images, fn_alignmask, winsize)
 % winsize: Estimation of motion parameter after temporal averaging or
 % weighted average when winsize is a vector, winsize should be always odd
@@ -34,18 +34,20 @@ if ~bglobal
     masktmp= var(data,0,3);
     mask2(inxn0) = masktmp(inxn0);
 
-    meanimg1 = (meanimg- min(meanimg(:)))/(max(meanimg(:))-min(meanimg(:)));
-    fmap = mask2;
-    baseimg = repmat(meanimg1,[1 1 3]);
-    fnsave ='test.mat'
-
-    autosel_GUI(meanimg1,fmap,baseimg,'Continuous',fnsave,'1st Threshold in single voxels');
-    Thr=load(fnsave);
-    Thr= Thr.thr;
+    %meanimg1 = (meanimg- min(meanimg(:)))/(max(meanimg(:))-min(meanimg(:)));
+    %fmap = mask2;
+    %baseimg = repmat(meanimg1,[1 1 3]);    
+    %fnsave ='test.mat';
+    %autosel_GUI(meanimg1,fmap,baseimg,'Continuous',fnsave,'1st Threshold in single voxels');
+    %Thr=load(fnsave);
+    %Thr= Thr.thr;    
+    %mask2(mask2<Thr)=0;
+    %figure; imagesc(log(1+mask2)); colormap('gray')
+    
+    
+    Thr = mean(mask2(:))+5*std(mask2(:));
     mask2(mask2<Thr)=0;
-    figure; imagesc(log(1+mask2)); colormap('gray')
-
-    meanimg1 = (meanimg- min(meanimg(:)))/(max(meanimg(:))-min(meanimg(:)));
+    meanimg1 = (meanimg- min(meanimg(:)))/(max(meanimg(:))-min(meanimg(:)));    
     fnsave = 'temp.mat';
     baseimg = repmat(meanimg1,[1 1 3]);
     Para.meanimg = meanimg;
@@ -57,7 +59,7 @@ if ~bglobal
 
     %% select ROIs
     maskroi=load(fnsave);
-    hfig=figure; 
+    figure; 
     subplot(121);
     imagesc(meanimg1); colormap('gray'); axis equal; xlim([1 size(meanimg1,2)]); ylim([1 size(meanimg1,1)])
     subplot(122);
@@ -231,7 +233,7 @@ end
 ymargin=5; xmargin=5;
 for iroi =selroi
     inxc = find(cci(:)==iroi);
-    [ys xs]= ind2sub(size(cci),inxc);
+    [ys, xs]= ind2sub(size(cci),inxc);
     cy=mean(ys); cx=mean(xs);
     radiusy = (max(ys)-cy);
     radiusx = (max(xs)-cx);

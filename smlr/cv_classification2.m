@@ -18,7 +18,7 @@ function [out opts] = cv_classification2(dataset_train,label_train,dataset_test,
 %                 mode == 3, time-independent (collapse all time info)            
 %                 mode == 4, spatio-temporal prediction (one trial --> one prediction)
 %         - inxsample: index of samples to be used for classification.
-%         - cvmode: cross-validation method ('random','kfold')        
+%         - cvmode: cross-validation method ('random','kfold','precal')        
 %         - Ncv: number of cross-validation
 %         - pertest: percentage of testing data in cross-validation, 
 %                    This percentage is based on # trials of testdata     
@@ -29,7 +29,7 @@ function [out opts] = cv_classification2(dataset_train,label_train,dataset_test,
 %         - bSparseW: Boolean variable for selection of a weight matrix with the highest sparseness
         
 % 2014-02-03, written by Sangkyun Lee
-
+% 2016-08-29, cvmode('precal') added for pre-calculated sample indexesforCV
 def_opts = struct('sel_cl',[1 2],'out_ch',[],'Nch',1,...
     'lambda1s',[1e-5  1e-1 1e-0 1e1],'lambda2s',[1e-5  1e-1 1e-0 1e1],...
     'bnorm',false,'mode',1,...
@@ -66,7 +66,7 @@ if strcmp(opts.cvmode,'kfold')
     assert(length(label_test)~=length(label_train),'# training sample should be the same as # testing sample');
     pertrain = 1-pertest-perval;    
     assert(pertrain>0 & pertrain<1,'pertrain should be (0,1)');
-else
+elseif strcmp(opts.cvmode,'random')
     % when # training samples are different from # testing samples,
     % to get the given number of training samples from get_cvinxs_rand(label_train,Ncv,pertest,perval);   
     pertest0 = 1-pertrain-perval;
@@ -158,6 +158,10 @@ elseif strcmp(opts.cvmode,'kfold')
     end
     inxs_cv_train = get_Kfoldcvinxs(label_train,Ncv,bval);
     inxs_cv_test = get_Kfoldcvinxs(label_test,Ncv,bval);
+    
+elseif strcmp(opts.cvmode,'precal')
+    inxs_cv_train = opts.inxs_cv;
+    inxs_cv_test = opts.inxs_cv;
     
 else
     error('Only random or kfold cross-validation mode allowed');
@@ -368,6 +372,7 @@ for cvinx = 1:Ncv
                     conf.W=[];conf.btrain = true;
                     conf.lambda1=lambda1s(inx_lam);
                     conf.lambda2=lambda2s(inx_lam);
+                    conf.bpar=false;
                     [W, out_tr] = sl_smlr(trdat, trlab,conf);                             
                     
                     if length(lambda1s)>1 && ~isempty(valdat) 
@@ -427,7 +432,7 @@ out.acc_train = acc_train;
 out.acc_test = acc_test;
 out.lambda = lambda;
 out.Ws = Ws;
- 
+out.inxs_cv = inxs_cv;
        
         
         

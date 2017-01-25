@@ -19,9 +19,7 @@ classdef TPSession
         
         
         scans=struct([]); % data loaded by load_data function
-        motion=struct([]); % motion_estimate (unit: image frame)
-        
-        %--------- I have not implemented anything 
+        motion=struct([]); % motion_estimate (unit: image frame)        
         eye = struct([]); 
         
     end
@@ -149,7 +147,7 @@ classdef TPSession
         end
         
         
-        function self = set_motion_rotaroad_imageframe(self,twin)
+        function self = set_motion_rotaroad_imageframe(self,twin,channel)
             % function set_motion_rotaroad_imageframe(self,twin)
             % calculate motion parameters and set the motion paramters
             for iscan = 1 : self.no_scan
@@ -162,7 +160,8 @@ classdef TPSession
                     'FMOTpath',FMOTpath,...
                     'frame_period',frame_period,...
                     'pixel_resolution',pixel_resolution,...
-                    'twin',twin);
+                    'twin',twin,...
+                    'channel',channel);
                 [~, dist_twin, IMG_motion, ~]= TP.TPSession.extract_motion_combo1(params);
                 
                 % frame_start in DAQ signal
@@ -186,13 +185,65 @@ classdef TPSession
             end
         end
         
+        function self = set_eyepar(self,par)
+            % function self = set_eyepar(self,par)
+            % set pupil parameters(x,y, size in radius) in trials
+            
+ 
+            ns = self.no_scan;
+            eye0 = struct('PP',[],'xy',[],'r',[],'vf_trial',[]);
+            self.eye = repmat(eye0,[1 ns]);
+            
+
+            dfX = cell(self.no_scan,1);
+            for i = 1 : ns
+                Params = self.scans(i).Params;
+                timeinfo = self.scans(i).timeinfo;
+                Params.files.mainpath = self.session_path;
+                [XYi, Ri, dPi, PP, vfinxi] = TP.get_eyepar_trial(Params,timeinfo);
+                self.eye(i).xy = XYi;    
+                self.eye(i).r = Ri;    
+                self.eye(i).PP = PP;
+                self.eye(i).vf_trial = vfinxi;
+                dfX{i} = dPi;                
+            end
+            
+%             self.eye = TP.detect_lmov(self.eye,dfX, par.lmovthr); % detect the large eye movement (e.g., saccades)
+%             self.eye = TP.detect_xybias(self.eye,par.dxythr); % detect the pupil center away from the pupil center distr           
+%             self.eye = TP.detect_slpup(self.eye,par.puppar); % detect small and large pupil
+            
+            eye1 = TP.detect_lmov(self.eye,dfX, par.lmovthr); % detect the large eye movement (e.g., saccades)            
+            eye2 = TP.detect_xybias(self.eye,par.dxythr); % detect the pupil center away from the pupil center distr                       
+            eye3 = TP.detect_slpup(self.eye,par.puppar); % detect small and large pupil
+            ntr = zeros(ns,1);
+            for i = 1: ns
+                r1 = cellfun(@isempty,eye1(i).r);
+                r2 = cellfun(@isempty,eye2(i).r);
+                r3 = cellfun(@isempty,eye3(i).r);
+                iival = find(r1 | r2 | r3);
+                emptycell = cell(length(iival),1);
+                eye1(i).xy(iival)=emptycell;
+                eye1(i).r(iival)=emptycell;
+                eye1(i).vf_trial(iival)=emptycell;            
+                ntr(i)=240-length(iival);
+            end
+            fprintf('Total trial= %d: %s trials selected in scans\n',sum(ntr),num2str(ntr')); 
+            self.eye = eye1;
+        end
         
         
         
-        
-        function [X, Xc, seltrial, timeF] = collect_trialresp_singlescan(self, inx_scan, pre_stimtime_ms, motionthr)
-            % function [X, Xc] = collect_trialresp_singlescan(self, inx_scan, pre_stimtime_ms, motionthr)
+        function [X, Xc, seltrial, timeF] = collect_trialresp_singlescan(self, inx_scan, pre_stimtime_ms, motionthr, beye)
+            % function [X, Xc] = collect_trialresp_singlescan(self, inx_scan, pre_stimtime_ms, motionthr, beye)
             % This function works only for trial-based experiment
+            
+            if nargin<4,
+                motionthr = struct([]);
+            end
+            if nargin<5
+                beye = false;
+            end
+            
             param = self.scans(inx_scan).Params;
             nframe_prestim = round(pre_stimtime_ms/param.msperframe);
             
@@ -211,11 +262,11 @@ classdef TPSession
             spec.dataType='dFF';
             spec.nCell= self.scan_ncell(inx_scan);
             
-            if nargin>3
+            if isstruct(motionthr) && ~isempty(motionthr)
                 motion1.tmotion1 = self.motion(inx_scan).IMG_motion;
                 motion1.tmotion2 = self.motion(inx_scan).dist_twin_frame;
                 motion1.motionthr1 = motionthr.IMG_motion_thr;
-                motion1.motionthr1 = motionthr.dist_twin_thr;
+                motion1.motionthr2 = motionthr.dist_twin_thr;
                 motion1.op='|';
                 motion1.bdisp = false;
                 spec.motion = motion1;
@@ -226,6 +277,19 @@ classdef TPSession
             [X, others]=data_sort(self.scans(inx_scan),spec,1);
             
             seltrial = others.seltrial{1};
+            if beye
+                eyei = self.eye(inx_scan);            
+                eyetrial = find(~cellfun(@isempty,eyei.xy));                
+                inxmap = zeros(max(max(seltrial),max(eyetrial)),1);
+                inxmap(seltrial)=1:length(seltrial);                
+                seltrial1 = intersect(seltrial,eyetrial);
+                
+                newinx = inxmap(seltrial1);
+                Xc{1} = Xc{1}(newinx,:,:);
+                X{1} = X{1}(newinx,:,:);
+               
+                seltrial = seltrial1;
+            end
         end
         
         function CL = get_cell_spkestval(self, scanlist)
@@ -250,8 +314,8 @@ classdef TPSession
         end
         
         
-        function [MXspk, MXc, trialinxs, tf] = collect_trialMresp(self, scanlist, twins ,motionthr)
-            % function collect_trialMresp(self, scanlist, twins ,motionthr)
+        function [MXspk, MXc, trialinxs, tf] = collect_trialMresp(self, scanlist, twins ,motionthr, beye)
+            % function collect_trialMresp(self, scanlist, twins ,motionthr,beye)
             % twins:    time windows to calculate the mean response
             %           can be multiple segments with matrix 2x no. window
             %           twins(1,i): start time (millisecond) in window i
@@ -259,6 +323,12 @@ classdef TPSession
             %           0 is the reference time synchronized with stimulus
             %           onset
             
+            if nargin<4,
+                motionthr = struct([]);
+            end
+            if nargin<5,
+                beye = false;
+            end
             [d nwin] = size(twins);
             assert(d==2,'twins should be a matrix with a size of 2xnwindow');
             assert(max(scanlist)<= self.no_scan, ['Total number of scan is ' num2str(self.no_scan)]);
@@ -271,18 +341,20 @@ classdef TPSession
                 pre_stimtime_ms = -pre_stimtime_ms; % should be positive for collect_trialresp_singlescan
             end
             
-            MXspk = cell(max(scanlist),nwin);
-            MXc = cell(max(scanlist),nwin);
-            tfs = cell(max(scanlist),1);
-            trialinxs = cell(max(scanlist),1);
-            for inx_scan = scanlist
+            ns = length(scanlist);
+            MXspk = cell(ns,nwin);
+            MXc = cell(ns,nwin);
+            tfs = cell(ns,1);
+            trialinxs = cell(ns,1);
+            
+            
+            for inx_scan0 = 1:ns
                 %param = self.scans(inx_scan).Params;
                 %stimparam = param.stimparam;
-                if nargin>3
-                    [X, Xc, seltrial, tf] = collect_trialresp_singlescan(self, inx_scan, pre_stimtime_ms, motionthr);
-                else
-                    [X, Xc, seltrial, tf] = collect_trialresp_singlescan(self, inx_scan, pre_stimtime_ms);
-                end
+                inx_scan = scanlist(inx_scan0);
+               
+                [X, Xc, seltrial, tf] = collect_trialresp_singlescan(self, inx_scan, pre_stimtime_ms, motionthr, beye);
+               
                 
                 
                 for iwin = 1: nwin
@@ -290,12 +362,12 @@ classdef TPSession
                                        
                     mXspk = squeeze(mean(X{1}(:,inxframes,:),2));                        
                     mXc = squeeze(mean(Xc{1}(:,inxframes,:),2));                                            
-                    MXspk{inx_scan,iwin} = mXspk;
-                    MXc{inx_scan,iwin} = mXc;
+                    MXspk{inx_scan0,iwin} = mXspk;
+                    MXc{inx_scan0,iwin} = mXc;
                 end
                 
-                trialinxs{inx_scan} = seltrial;
-                tfs{inx_scan} = tf;
+                trialinxs{inx_scan0} = seltrial;
+                tfs{inx_scan0} = tf;
                 
             end
             
@@ -325,10 +397,10 @@ classdef TPSession
             pixel_resolution = params.pixel_resolution;
             frame_period = params.frame_period; % TP image frame period (
             twin = params.twin; % time window for movement distance 
-            
+            channel = params.channel; % DAQ channel index
             
             [speed, dist_twin, IMG_motion, outparam]  =...
-                extract_motion_combo(DAQpath,FMOTpath,pixel_resolution, frame_period,twin);
+                extract_motion_combo(DAQpath,FMOTpath,pixel_resolution, frame_period,twin,channel);
         end
     end
 end

@@ -1,4 +1,4 @@
-function [data list_self] = loadTseries(finfo)
+function [data, list_self] = loadTseries(finfo)
 % function [data list_self] = loadTseries(finfo)
 % Input: 
 %   1. finfo should be a string containing the complete path and file name
@@ -11,8 +11,9 @@ function [data list_self] = loadTseries(finfo)
 % Sangkyun Lee 08-30-2013
 % 10-14-2013 debugged by Sangkyun Lee
 % 02-05-2015 loading tiff file changed by Sangkyun Lee
+% 11-08-2016 bug fix when called in matlab 2015
 
-list_self={};
+
 data=uint16([]);
 if ischar(finfo)    
    [pathstr, name, ext] = fileparts(finfo); 
@@ -24,12 +25,7 @@ if ischar(finfo)
    elseif strcmp(ext,'.tif')
        filenames{1} = fullfile(pathstr,[name ext]);
    end
-%    tic
-%    info =  imfinfo(filenames{1});
-%    for iImg=1:length(info)
-%        data(:,:,iImg)=imread(filenames{1},iImg);
-%    end
-%    toc
+
    
    
     % new tiff loading code
@@ -39,28 +35,47 @@ if ischar(finfo)
     nImage=InfoImage(1).Height;
     NumberImages=length(InfoImage);
     data=zeros(nImage,mImage,NumberImages,'uint16');
-    FileID = tifflib('open',FileTif,'r');
-    rps = tifflib('getField',FileID,Tiff.TagID.RowsPerStrip);
+    
+    v = version;
+    mv = textscan(v,'%f');
+    mv = mv{1}(1);
 
-    for i=1:NumberImages
-       tifflib('setDirectory',FileID,i);
-       % Go through each strip of data.
-       rps = min(rps,nImage);
-       for r = 1:rps:nImage
-          row_inds = r:min(nImage,r+rps-1);
-          stripNum = tifflib('computeStrip',FileID,r);
-          data(row_inds,:,i) = tifflib('readEncodedStrip',FileID,stripNum);
-       end
+    if mv>8
+        t = Tiff(FileTif,'r');
+        
+        for i = 1 : NumberImages
+             setDirectory(t,i);
+            data(:,:,i) = read(t);
+        end
+        close(t)
+    elseif mv == 7.13
+        FileID = tifflib('open',FileTif,'r');
+        rps = tifflib('getField',FileID,Tiff.TagID.RowsPerStrip);
+
+        for i=1:NumberImages
+           tifflib('setDirectory',FileID,i);
+           % Go through each strip of data.
+           rps = min(rps,nImage);
+           for r = 1:rps:nImage
+              row_inds = r:min(nImage,r+rps-1);
+              stripNum = tifflib('computeStrip',FileID,r);
+              data(row_inds,:,i) = tifflib('readEncodedStrip',FileID,stripNum);
+           end
+        end
+        tifflib('close',FileID);
+    else
+        error('not implemented yet');
     end
-    tifflib('close',FileID);
+    
     if strcmp(ext,'.zip')
         delete(filenames{1});
     end
+    list_self={};
    
 elseif isstruct(finfo)
-   if exist(finfo.dir)~=7,
-       msg = sprintf('Directory (%s) does not exist',finfo.dir)
-       error(msg);
+   if exist(finfo.dir,'dir')~=7,
+       %msg = sprintf('Directory (%s) does not exist',finfo.dir)
+       error('Directory (%s) does not exist',finfo.dir);
    else
 
         fnpattern = finfo.fnpattern;
@@ -71,9 +86,10 @@ elseif isstruct(finfo)
         ifnn=1;
 
         lenp=length(fnpattern);
+        list_self = cell(1,length(listf));
         for ifn = 1:length(listf)    
             fn=listf(ifn).name;    
-            if length(fn)>lenp+3 & strcmp(fn(end-3:end),['.' fext])                
+            if length(fn)>lenp+3 && strcmp(fn(end-3:end),['.' fext])                
                 lenp = length(fnpattern);
                 if strcmp(fn(1:lenp),fnpattern),
                     list_self{ifnn}=fn;

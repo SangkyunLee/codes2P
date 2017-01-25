@@ -64,23 +64,23 @@ timeinfo.stimtime(1:length(stimtime))=stimtime(:);
 
 
 
-msperframe = Params.msperframe;
-timescale = msperframe/1000;
-inx=find(timeinfo.frame_start);
-a=timeinfo.stimtime(inx);
-inxstart=find(diff(a)>0);
-inxend=find(diff(a)<0);
-if length(inxend)<length(inxstart)
-    inxend(end+1)=length(a);
-end
-stimlen = length(inxstart)
-stimtimes=cell(1,stimlen);
-stimframes=cell(1,stimlen);
-for ie=1:stimlen    
-    stimtimes{ie}=[inxstart(ie) inxend(ie)]*timescale;
-    stimframes{ie}=[inxstart(ie) inxend(ie)];
-end
-stimtimeinframe.stimtimes = stimtimes;
-stimtimeinframe.stimframes = stimframes;
-stimtimeinframe. stimlen = stimlen;
-timeinfo.stimtimeinframe = stimtimeinframe;
+% msperframe = Params.msperframe;
+% timescale = msperframe/1000;
+% inx=find(timeinfo.frame_start);
+% a=timeinfo.stimtime(inx);
+% inxstart=find(diff(a)>0);
+% inxend=find(diff(a)<0);
+% if length(inxend)<length(inxstart)
+%     inxend(end+1)=length(a);
+% end
+% stimlen = length(inxstart)
+% stimtimes=cell(1,stimlen);
+% stimframes=cell(1,stimlen);
+% for ie=1:stimlen    
+%     stimtimes{ie}=[inxstart(ie) inxend(ie)]*timescale;
+%     stimframes{ie}=[inxstart(ie) inxend(ie)];
+% end
+% stimtimeinframe.stimtimes = stimtimes;
+% stimtimeinframe.stimframes = stimframes;
+% stimtimeinframe. stimlen = stimlen;
+% timeinfo.stimtimeinframe = stimtimeinframe;

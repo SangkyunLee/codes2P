@@ -81,6 +81,11 @@ classdef filt_video < VideoReader
             index = numel(self.filtsteps)+1;
             self.filtsteps{index}=step;
         end
+        function self = clearfiltstep(self)
+        %-----clear filtersteps
+            
+            self.filtsteps={};
+        end
   
         function self = applyfilt(self)   
         %----- apply filters
@@ -89,6 +94,16 @@ classdef filt_video < VideoReader
             end
             self.bfilted = true;
                 
+        end
+        
+        function self=cleardata(self)
+            self.data=[];
+            self.filtdata=[];
+            self.Xr=[];
+            self.Yr=[];
+            self.filtsteps={};       
+            self.KeepOrg=NaN;
+            self.bfilted=NaN;
         end
 
     end

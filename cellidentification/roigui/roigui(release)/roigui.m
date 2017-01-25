@@ -1,4 +1,4 @@
-function roigui(im,ROI_list,pixel_dimension)
+function hctrlfig=roigui(im,ROI_list,pixel_dimension)
 %   
 %   im :  input images, organized to 3-D (x by y by t) matrix
 %   ROI_list:  optional, input to re-use previously selected ROI

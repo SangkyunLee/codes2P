@@ -1,4 +1,4 @@
-function [speed, dist_twin, IMG_motion, outparam] = extract_motion_combo(DAQpath,FMOTpath,pixel_resolution, frame_period, twin, bfig)
+function [speed, dist_twin, IMG_motion, outparam] = extract_motion_combo(DAQpath,FMOTpath,pixel_resolution, frame_period, twin,channel, bfig)
 
 % rotation pattern (clockwise or counter clockwise)
 ROT1 = [0 0 0 1 1 1 1 0];
@@ -49,7 +49,9 @@ len1 = length(Ymov);
 
 
 %%
-ROT_motion = DAQ_data(:,[1 4 5]);
+ROT_motion = DAQ_data(:,[1 channel]);
+% figure; plot(ROT_motion(:,1), ROT_motion(:,2:3));
+
 IMG_motion(:,1) = [1:len1]*frame_period;
 IMG_motion(:,2) = sqrt(Xmov.^2+Ymov.^2)*pixel_resolution;
 
@@ -100,7 +102,7 @@ len=min(length(speed),length(direction))
 %  figure; 
  
 % close all
-if nargin>5 & bfig
+if exist('bfig','var') && bfig
     figure; hold on;
     plot(ROT_motion(:,1),ROT_motion(:,2:3))
     plot(IMG_motion(:,1),IMG_motion(:,2),'k')
@@ -122,14 +124,14 @@ outparam.direction = direction;
 outparam.statechange_inx = statechange_inx;
 IMG_motion = IMG_motion(:,2);
  
-if nargin>4 
+if exist('twin','var')
     %calculation the distance in cm during the given time twin
     Ntwin = round(DAQ_sampleperiod*twin);
     speed_twin = ones(Ntwin,1)*twin;
     dist_twin = conv(speed,speed_twin);
     dist_twin = dist_twin(round(Ntwin/2)+1:length(speed)+round(Ntwin/2));
 
-    if nargin>5 & bfig
+    if exist('bfig','var')
         plot(DAQ_data(:,1),dist_twin,'c','LineWidth',2)
         ylim([0 10])
     end

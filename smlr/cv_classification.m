@@ -132,10 +132,15 @@ elseif strcmp(opts.cvmode,'kfold')
         opts.pertest = 1/Ncv;
     end
     inxs_cv = get_Kfoldcvinxs(label,Ncv,bval);
+elseif strcmp(opts.cvmode,'precal')
+    inxs_cv = opts.inxs_cv;
+    if length(inxs_cv.inxs_train)~=opts.Ncv
+        error('incorrect pre-calculated CV indexes');
+    end
 else
     error('Only random or kfold cross-validation mode allowed');
 end
-    
+   
 
 acc_test=zeros(1, Ncv);
 acc_train=zeros(1, Ncv);
@@ -220,7 +225,7 @@ for cvinx = 1:Ncv
                 lambda(:,cvinx) = [0; 0];
                 
             elseif strcmp(opts.classifier,'SL2LDA')
-                evtid = unique(trlab);
+                evtid = unique(trlab);                
                 if length(evtid)~=2, error('This code allows for binary classification'); end
                 trlab1 = zeros(size(trlab));                
                 trlab1(find(trlab==evtid(1)))=1;
@@ -234,11 +239,13 @@ for cvinx = 1:Ncv
                 vallab1(find(vallab==evtid(1)))=1;
                 vallab1(find(vallab==evtid(2)))=-1;
                 
-                trdat1 = [trdat; ones(1,size(trdat,2))];
+                sc = mean(trdat(:));
+
+                trdat1 = [trdat; sc*ones(1,size(trdat,2))];
                 M = trdat1*trdat1';
                 N = trdat1*trlab1';
-                tedat1 = [tedat; ones(1,size(tedat,2))];
-                valdat1 = [valdat; ones(1,size(valdat,2))];
+                tedat1 = [tedat; sc*ones(1,size(tedat,2))];
+                valdat1 = [valdat; sc*ones(1,size(valdat,2))];
                 
                 lambda1s = unique(lambda1s);
                 for inx_lam=1:length(lambda1s)        
@@ -335,6 +342,7 @@ for cvinx = 1:Ncv
                     conf.W=[];conf.btrain = true;
                     conf.lambda1=lambda1s(inx_lam);
                     conf.lambda2=lambda2s(inx_lam);
+                    conf.bpar=false;
                     [W, out_tr] = sl_smlr(trdat, trlab,conf);                             
                     
                     if length(lambda1s)>1 && ~isempty(valdat) 
@@ -394,7 +402,7 @@ out.acc_train = acc_train;
 out.acc_test = acc_test;
 out.lambda = lambda;
 out.Ws = Ws;
- 
+out.inxs_cv = inxs_cv;
        
         
         

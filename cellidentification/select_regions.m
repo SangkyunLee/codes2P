@@ -6,9 +6,9 @@ mode = Para.mode;
 fnsave = Para.fnsave;
 figname = Para.figname;
 
-[dy dx]=size(meanimg);
-[dy1 dx1]=size(fmap);
-[dy2 dx2 ~]=size(baseimg);
+[dy, dx]=size(meanimg);
+[dy1, dx1]=size(fmap);
+[dy2, dx2, ~]=size(baseimg);
 if (dy1~=dy2) || (dx1~=dx2)
     error('Dimensions of images should be same');
 end
@@ -16,12 +16,12 @@ end
 winheight = 700;
 winwidth = 1000;
 hfig=figure('Position', [400 200 winwidth winheight]);
-if exist('figname')
+if exist('figname','var')
     set(hfig,'Name',figname);
 end
 left=0.02; bottom=0.45; fwidth=0.38; fheight=fwidth*dy/dx;
 haxs(1)=axes('Position',[left bottom fwidth fheight],'Parent',hfig);   
-hImg1 = overlayImage(baseimg,fmap, haxs(1),'Continuous');
+overlayImage(baseimg,fmap, haxs(1),'Continuous');
 axis equal; xlim([1 dx]); ylim([1 dy]);
 
 left=0.3;  bottom=0.22; fwidth=0.65; fheight=fwidth*dy1/dx1;

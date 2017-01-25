@@ -2,5 +2,5 @@ lapacklib = fullfile(matlabroot,'extern','lib',computer('arch'),'microsoft',...
   'libmwlapack.lib');
 blaslib = fullfile(matlabroot,'extern','lib',computer('arch'),'microsoft',...
   'libmwblas.lib');
-mex('-g', '-largeArrayDims', 'smlr.c', blaslib)
+mex('-g', '-largeArrayDims', 'smlr.c'), blaslib)
 % mex('-g', '-largeArrayDims', 'test.c', blaslib)

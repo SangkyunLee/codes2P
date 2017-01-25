@@ -91,13 +91,15 @@ if strcmp(DAQfn(end-3:end),'.EDR')
     zmirror2 = ztrans(mirror2,1);
     dM = abs(diff(zmirror1))+abs(diff(zmirror2));
 elseif strcmp(DAQfn(end-3:end),'.csv') %-------- this code for NB208 in neurosensory building
-    % This function is too slow
-    %M = importdata(fullfn_DAQ);
-    %DAQ_data = M.data;
+    
     fid = fopen(fullfn_DAQ);
     C1 = textscan(fid, '%s %s%d, %s%d, %s%d, %s%d\n');
     DAQ_data = textscan(fid, '%f, %f, %f, %f, %f','CollectOutput', 1);
     fclose(fid);    
+    
+    %[d, h]=load_daq(fullfn_DAQ,4,'neurosensory');
+    
+    
     DAQ_data = DAQ_data{1};    
     DAQ_data(:,1) = DAQ_data(:,1)/1000;
     

@@ -1,5 +1,5 @@
-function [inxtrials, outdata] = shuffle_trials(evts,evtids,data)
-% function [inxtrials, outdata] = shuffle_trials(evts,evtids,data)
+function [outdata, inxtrials] = shuffle_trials(evts,evtids,data)
+% function [outdata, inxtrials] = shuffle_trials(evts,evtids,data)
 % This shuffle function works for shuffling with the same evtids
 % INPUT: 
 %        evts: [Tx1] T-trial vecotr composed of different events

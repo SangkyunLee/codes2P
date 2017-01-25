@@ -131,6 +131,7 @@ function exportdata(hObj, event, handles)
     else
         save('THRtemp.mat','THR');
     end
+    assignin('base','THR',THR);
 
 
     close(handles.hfig);

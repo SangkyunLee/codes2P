@@ -8,8 +8,19 @@ function [out, varout] = apply_fun_chunk (hf, chunksize,out,varargin)
 
 
     Nframe = size(varargin{1},3);
-    nchunk = ceil(Nframe/chunksize);
+    nchunk = ceil(Nframe/chunksize);    
     selframes = varargin{2};
+    fnstr = func2str(hf);
+    
+    if isempty(out)
+        if strfind(fnstr,')track_rawdata2(')
+            out.sPIX=cell(1,Nframe);
+            out.CM = zeros(2,Nframe);
+        elseif strfind(fnstr,')est_puppar(') 
+            out(Nframe).par=[];
+            out(Nframe).data=[];
+        end
+    end
     
     for ichunk = 1 : nchunk
 
@@ -23,17 +34,26 @@ function [out, varout] = apply_fun_chunk (hf, chunksize,out,varargin)
 
         
         subdata = varargin{1}(:,:,ixx);
-        CM1 = varargin{3}(:,ixx);
+        if size(varargin{3},2)==1 
+            CM1 = varargin{3}*ones(1,length(ixx));
+        else
+            CM1 = varargin{3}(:,ixx);
+        end
 
 
 
         %outtmp = track_rawdata2(subdata,opt3,InitPar,CM1,1,ixx3);   
-        fnstr = func2str(hf);
-        if strfind(fnstr,'track_rawdata')            
+        
+        if strfind(fnstr,')track_rawdata(')            
+            error('not implemented yet');
+
+        elseif  ~isempty(strfind(fnstr,')track_rawdata2('))...
+                || ~isempty(strfind(fnstr,')track_rawdata2_PL('))
             outtmp = feval(hf,subdata,CM1,ixx3);                 
             out.sPIX(ixx2) = outtmp.sPIX(ixx3);
             out.CM(:,ixx2) = outtmp.CM(:,ixx3);
-        elseif strfind(fnstr,'est_puppar')       
+            
+        elseif strfind(fnstr,')est_puppar(')       
             if length(varargin)==4
                 sPIX = varargin{4}(ixx);
             else

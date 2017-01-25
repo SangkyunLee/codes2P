@@ -92,10 +92,10 @@ for iimg = frames
     Nc=size(CM1,2);
     dist=zeros(winsize,Nc);    
     for iwin = 1: winsize
-        if iimg <= iwin,
+        if iimg < iwin,
             continue;
         end
-        dist(iwin,:) = sqrt(sum(bsxfun(@minus,CM1(1:2,:),newCM(1:2,iimg-iwin)).^2,1));            
+        dist(iwin,:) = sqrt(sum(bsxfun(@minus,CM1(1:2,:),newCM(1:2,iimg-iwin+1)).^2,1));            
     end
 
     dist = mean(dist,1);

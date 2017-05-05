@@ -188,18 +188,13 @@ set(hobjs.PopupDisplay,'String',{dispstruct.name});
 PopupDisplayCallback();
 drawROI();
 
-% this code is not compatible with matlab 2015
-% if  usejava('awt') % java enabled -> use it to update while dragging
-%     l1=handle.listener(hobjs.SlFrame,'ActionEvent',@SlFrameCallback);
-%     l2=handle.listener(hobjs.SlMax,'ActionEvent',@SlMaxCallback);
-%     l3=handle.listener(hobjs.SlMin,'ActionEvent',@SlMinCallback);
-% end
 
-% I changed the code like below
-set(hobjs.SlFrame,'Callback',@SlFrameCallback);
-set(hobjs.SlMax,'Callback',@SlMaxCallback);
-set(hobjs.SlMin,'Callback',@SlMinCallback);
-%%%%%%%%%%%%%%%%%
+if  usejava('awt') % java enabled -> use it to update while dragging
+    l1=handle.addlistener(hobjs.SlFrame,'ActionEvent',@SlFrameCallback);
+    l2=handle.listener(hobjs.SlMax,'ActionEvent',@SlMaxCallback);
+    l3=handle.listener(hobjs.SlMin,'ActionEvent',@SlMinCallback);
+end
+
 
     function ListROICallback(varargin)
         drawROI();

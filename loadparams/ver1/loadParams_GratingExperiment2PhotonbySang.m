@@ -219,7 +219,7 @@ if ~isempty(bphoto) && strcmp(bphoto,'Yes')
                     Params.diff_mirror_start_time = diff(mirror_start_time);
 
 
-                    image_frame_duration = (mirror_start_time(size(mirror_start_time,2))-mirror_start_time(1))/(size(mirror_start_time,2)-1);
+                    image_frame_duration = (mirror_start_time(size(mirror_start_time,1))-mirror_start_time(1))/(size(mirror_start_time,1)-1);
                     image_frame_time = zeros(length(mirror_start_time),1);
                     
                     for i = 1: length(mirror_start_time)
@@ -377,10 +377,11 @@ else
             hfig= figure; 
             len1 = length(mirror_frame_start);
             len1 = min(len1, length(mirror1));
-            plot(DAQ_data(ik2:len1,1),mirror_frame_start(ik2:len1)/10); 
+            
             hold on; plot(DAQ_data(ik2:end,1),mirror1(ik2:end),'r')
+            plot(DAQ_data(ik2:len1,1),sign(mirror_frame_start(ik2:len1))*max(mirror1(ik2:end)),'linewidth',2); 
             %plot([mirror_frame_start(ik2:end) zmirror2(ik2:end)]);
-            legend('From xml file','mirror2');
+            legend('mirror2','From xml file');
             title('Timestamp identification of frames');
             uiwait(hfig);
             bTimestampOfframe = questdlg('Do you accept the timestamp of frames identification?', ...

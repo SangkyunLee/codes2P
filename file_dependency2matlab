@@ -1,0 +1,14 @@
+
+fnpath = '/home/slee/data/codes2P/cellidentification/roigui/roigui(release)/private';
+flist = dir([fnpath filesep '*.m']);
+nf =length(flist);
+files_in = cell(nf,1);
+for i = 1 : nf
+files_in{i}=fullfile(fnpath,flist(i).name);
+end
+
+[names, folders] = dependencies.toolboxDependencyAnalysis(files_in); 
+
+
+%% List of toolboxes needed
+%'Image Processing Toolbox'    'MATLAB'    'Statistics and Machine Learning T…' 

@@ -71,7 +71,7 @@ if T > opts.chunk
         
     end  
     
-    if sT>T, error('chuncksize+2*offset should be less than total frames'); end
+    %if sT1>T, error('chuncksize+2*offset should be less than total frames'); end
     n=eye(sT);
 else
     nchunk = 1;

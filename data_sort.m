@@ -1,7 +1,10 @@
-function [Y others]=data_sort(data,spec,bquiet, Params)
+function [Y, others]=data_sort(data,spec,bquiet, Params)
 % function [Y others]=data_sort(data,spec)
 %
 % INPUT:
+% data.(dtype)
+% data.timeinfo (optional)
+% data.Params  (optional)
 % frames = spec.frames;
 % dataType = spec.dataType;
 % nCell = spec.nCell;
@@ -35,7 +38,7 @@ end
 frames = spec.frames;
 dataType = spec.dataType;
 nCell = spec.nCell;
-if isfield(spec,'motion') & isstruct(spec.motion)
+if isfield(spec,'motion') && isstruct(spec.motion)
     if isfield(spec.motion,'tmotion')
         tmotion = spec.motion.tmotion;
         motionthr = spec.motion.motionthr;
@@ -70,10 +73,10 @@ stiminx = cell(1,length(data));
 for idata=1:length(data);   
     
     
-    if isfield(data,'timeinfo') && ~isempty(data.timeinfo)
-        timeinfo = data.timeinfo;
+    if isfield(data,'timeinfo') && ~isempty(data(idata).timeinfo)
+        timeinfo = data(idata).timeinfo;
     elseif isfield(Params,'timeinfo')  && ~isempty(Params.timeinfo)
-        timeinfo = Params.timeinfo;
+        timeinfo = Params(idata).timeinfo;
     else
         if  strcmp(Params(idata).files.stim_fn1,'GratingExperiment2Photon.mat')
             timeinfo = gen_stimtime_GratingExperiment2Photon(Params(idata));
@@ -147,8 +150,8 @@ for idata=1:length(data)
             cut_post(itrial)=1;
         end      
         if bmotion
-            inxframe = stimonset(itrial)+[-5:trialdur(itrial)+5];
-            if inxframe(1)>0 & inxframe(end)<=Nframes
+            inxframe = stimonset(itrial)+(-5:trialdur(itrial)+5);
+            if inxframe(1)>0 && inxframe(end)<=Nframes
                 cut_motion(itrial) = any(Bigmotion(inxframe));
             end
         end

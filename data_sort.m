@@ -7,7 +7,7 @@ function [Y, others]=data_sort(data,spec,bquiet, Params)
 % data.Params  (optional)
 % frames = spec.frames;
 % dataType = spec.dataType;
-% nCell = spec.nCell;
+% % nCell = spec.nCell;
 % head motion in timeseries
 % spec.motion.tmotion; 
 % Threshold for trial rejection for big motion
@@ -37,7 +37,7 @@ end
     
 frames = spec.frames;
 dataType = spec.dataType;
-nCell = spec.nCell;
+% nCell = spec.nCell;
 if isfield(spec,'motion') && isstruct(spec.motion)
     if isfield(spec.motion,'tmotion')
         tmotion = spec.motion.tmotion;
@@ -75,6 +75,8 @@ for idata=1:length(data);
     
     if isfield(data,'timeinfo') && ~isempty(data(idata).timeinfo)
         timeinfo = data(idata).timeinfo;
+    elseif isfield(data,'vstimeinfo') && ~isempty(data(idata).vstimeinfo)
+        timeinfo = data(idata).vstimeinfo;
     elseif isfield(Params,'timeinfo')  && ~isempty(Params.timeinfo)
         timeinfo = Params(idata).timeinfo;
     else
@@ -116,12 +118,13 @@ events =cell(1,length(data));
 for idata=1:length(data)
    
     sig = data(idata).(dataType);
-    if nCell==size(sig,1)
-        sig = sig';
-    elseif nCell == size(sig,2)
-    else
-        error('data dimension mismatch');
-    end
+%     if nCell==size(sig,1)
+%         sig = sig';
+%     elseif nCell == size(sig,2)
+%     else
+%         error('data dimension mismatch');
+%     end
+    nCell = size(sig,2);
     Nframes = Params(idata).Nframes;
         
 

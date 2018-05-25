@@ -632,7 +632,7 @@ function wbu(h,~)
                     tmpROI.fmean_fill =[];
                 end
                 tmpROI = formulateROI(tmpROI, [m n]);            
-                if (length(M.data.newROI)<roinum && isfield(M.data.newROI(roinum-1),'neuropilarea'))...
+                if (length(M.data.newROI)<roinum && isfield(M.data.newROI(1),'neuropilarea'))...
                     || (length(M.data.newROI)>=roinum && isfield(M.data.newROI(roinum),'neuropilarea'))
                     tmpROI.neuropilarea=[];
                 end

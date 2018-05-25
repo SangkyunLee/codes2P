@@ -19,6 +19,28 @@ classdef PDT < Timestamp
             tstamp = t(tinx);         
             
         end
+        
+        function plot_result(self, tstamp, t1, title)
+            
+            if nargin<3
+                t1 = 40;
+            end
+            if nargin<4
+                figure;
+            else
+                figure('Name',title);
+            end
+            subplot(2,1,1);
+            inx1 = self.t<t1;
+            inx2 =find(tstamp<t1);
+            plot(self.t(inx1),self.y(inx1)); 
+            hold on; plot(tstamp(inx2),max(self.y)*ones(size(inx2)),'r.');
+            subplot(2,1,2);
+            inx1 = self.t>self.t(end)-t1;
+            inx2 =find(tstamp>(self.t(end)-t1));
+            plot(self.t(inx1),self.y(inx1)); 
+            hold on; plot(tstamp(inx2),max(self.y)*ones(size(inx2)),'r.');
+        end
     end
 end
 

@@ -39,7 +39,13 @@ classdef TPSession
                 self.no_scan = length(loaddata.data);  
                 self.scanId = zeros(1,self.no_scan);
                 for iscan= 1: self.no_scan
-                    snum = strsplit(loaddata.data(iscan).Params.files.subpath_xml,'-');
+                    files = loaddata.data(iscan).Params.files;
+                    if isfield(files, 'subpath_xml')
+                        xml_subpath = files.subpath_xml;
+                    elseif isfield(files,'xml_subpath')
+                        xml_subpath = files.xml_subpath;
+                    end                    
+                    snum = strsplit(xml_subpath,'-');
                     self.scanId(iscan) =  str2double(snum{end});
                 end
                 
@@ -57,11 +63,6 @@ classdef TPSession
                 for iscan = 1: self.no_scan
                     self.scan_stim{iscan}= self.scans(iscan).exptype;
                     ncell = size(self.scans(iscan).Nhat,2);
-%                     if length(self.scans(iscan).ROI) > 1,
-%                         for iseg = 2 : length(self.scans(iscan).ROI)
-%                             ncell = min(ncell,length(self.scans(iscan).ROI{iseg}));
-%                         end
-%                     end
                     self.scan_ncell(iscan) = ncell;
                 end
                 clear loaddata;               
@@ -75,7 +76,7 @@ classdef TPSession
         end
         
         
-        function [b bs] = check_stim_consistency(self, scanlist,evtsort)
+        function [b, bs] = check_stim_consistency(self, scanlist,evtsort)
             % function [b bs] = check_stim_consistency(self, scanlist,evtsort)
             % if consistent, return true, reference point is the
             % scanlist(1)
@@ -106,7 +107,7 @@ classdef TPSession
                 b=false;
             end
         end
-        function [b bs] = check_param_consistency(self, scanlist,parsort)
+        function [b, bs] = check_param_consistency(self, scanlist,parsort)
             % bs = check_param_consistency(self, scanlist,parsort)
             % if consistent, return true, reference point is the
             % scanlist(1)
@@ -329,7 +330,7 @@ classdef TPSession
             if nargin<5,
                 beye = false;
             end
-            [d nwin] = size(twins);
+            [d, nwin] = size(twins);
             assert(d==2,'twins should be a matrix with a size of 2xnwindow');
             assert(max(scanlist)<= self.no_scan, ['Total number of scan is ' num2str(self.no_scan)]);
             

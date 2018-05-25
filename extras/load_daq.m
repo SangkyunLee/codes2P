@@ -6,6 +6,8 @@ function [d, h] = load_daq(fn,nch,where)
 % d: data; first column is time
 % h: hearder info
 
+% revised 02-01-2018 by adding new recording systems (BTM5p4, VA5p4: prairie 5.4)
+
 [~, ~, ext] = fileparts(fn);
 switch where
     case {'neurosensory'}
@@ -27,10 +29,12 @@ switch where
             h = textscan(fid,fl1);        
             d = textscan(fid, fl2,'CollectOutput', 1);
             fclose(fid); 
-            
+           
         else
             d = [];
         end
+    case {'BTM5p4','VA5p4'}
+       [h,d] = read_csv(fn,nch); 
     otherwise
         error('not implmented');
 end
